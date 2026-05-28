@@ -1,0 +1,26 @@
+{
+  "solidity": "0.8.20",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "remappings": [
+    "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts/",
+    "forge-std=lib/forge-std/src/"
+  ],
+  "paths": {
+    "sources": "./contracts",
+    "tests": "./test",
+    "scripts": "./scripts",
+    "cache": "./cache",
+    "artifacts": "./out"
+  },
+  "profile": {
+    "default": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      }
+    }
+  }
+}
