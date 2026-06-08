@@ -3,19 +3,19 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "./MintableToken.sol";
+import "../src/BlacklistToken.sol";
 
 /**
- * @title DeployMintableToken
- * @dev Script to deploy a Mintable ERC20 token
+ * @title DeployBlacklistToken
+ * @dev Script to deploy a Blacklist ERC20 token
+ * @notice Owner can blacklist addresses for compliance
  */
-contract DeployMintableToken is Script {
+contract DeployBlacklistToken is Script {
     // Configuration
-    string constant TOKEN_NAME = "Mintable Token";
-    string constant TOKEN_SYMBOL = "MNTT";
+    string constant TOKEN_NAME = "Compliant Token";
+    string constant TOKEN_SYMBOL = "CPLT";
     uint8 constant DECIMALS = 18;
-    uint256 constant INITIAL_SUPPLY = 1000000 * 10**18; // 1 million
-    uint256 constant MAX_SUPPLY = 10000000 * 10**18; // 10 million max
+    uint256 constant INITIAL_SUPPLY = 1000000 * 10**18;
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -23,21 +23,18 @@ contract DeployMintableToken is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        MintableToken token = new MintableToken(
+        BlacklistToken token = new BlacklistToken(
             TOKEN_NAME,
             TOKEN_SYMBOL,
             DECIMALS,
-            INITIAL_SUPPLY,
-            MAX_SUPPLY
+            INITIAL_SUPPLY
         );
 
         vm.stopBroadcast();
 
-        console.log("Mintable Token deployed!");
+        console.log("Blacklist Token deployed!");
         console.log("Name:", token.name());
         console.log("Symbol:", token.symbol());
-        console.log("Initial Supply:", INITIAL_SUPPLY);
-        console.log("Max Supply:", token.maxSupply());
         console.log("Contract Address:", address(token));
     }
 }

@@ -37,37 +37,37 @@ TEMPLATES = {
     "standard": {
         "label": "Standard ERC-20",
         "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply)",
-        "script": "DeployStandardToken.s.sol",
+        "script": "script/DeployStandardToken.s.sol",
         "features": ["ERC-20 base", "mint", "burn"],
     },
     "mintable": {
-        "label": "Mintable ERC-20",
-        "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply)",
-        "script": "DeployMintableToken.s.sol",
-        "features": ["ERC-20 base", "owner-only mint", "burn"],
+        "label": "Mintable ERC-20 (with cap)",
+        "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply, uint256 maxSupply)",
+        "script": "script/DeployMintableToken.s.sol",
+        "features": ["ERC-20 base", "owner-only mint up to cap", "burn"],
     },
     "burnable": {
         "label": "Burnable ERC-20",
         "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply)",
-        "script": "DeployStandardToken.s.sol",
+        "script": "script/DeployStandardToken.s.sol",
         "features": ["ERC-20 base", "public burn", "uses StandardToken (mint+burn)"],
     },
     "pausable": {
         "label": "Pausable ERC-20",
         "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply)",
-        "script": "DeployPausableToken.s.sol",
+        "script": "script/DeployPausableToken.s.sol",
         "features": ["ERC-20 base", "owner pause/unpause", "burn"],
     },
     "deflationary": {
         "label": "Deflationary (fee-on-transfer) ERC-20",
-        "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply, uint256 feeBps)",
-        "script": "DeployDeflationaryToken.s.sol",
+        "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply, uint256 transferTaxRate)",
+        "script": "script/DeployDeflationaryToken.s.sol",
         "features": ["ERC-20 base", "transfer fee (burn)"],
     },
     "blacklist": {
         "label": "Blacklist ERC-20",
         "ctor": "(string name, string symbol, uint8 decimals, uint256 initialSupply)",
-        "script": "DeployBlacklistToken.s.sol",
+        "script": "script/DeployBlacklistToken.s.sol",
         "features": ["ERC-20 base", "owner-managed blacklist", "seize"],
     },
 }
@@ -108,8 +108,12 @@ def cmd_list(_args: argparse.Namespace) -> int:
 
 
 def _wei(human_amount: float, decimals: int) -> int:
-    """Convert a human-readable token amount to raw integer (with decimals)."""
-    return int(human_amount * (10 ** decimals))
+    """Convert a human-readable token amount to raw integer (with decimals).
+    Uses Decimal to avoid float precision loss for large amounts like
+    1_000_000 tokens with 18 decimals (= 10^24)."""
+    from decimal import Decimal
+    raw = Decimal(str(human_amount)) * (Decimal(10) ** decimals)
+    return int(raw)
 
 
 def cmd_render(args: argparse.Namespace) -> int:
@@ -140,8 +144,13 @@ def cmd_render(args: argparse.Namespace) -> int:
         return 2
 
     # Build the constructor args based on template
-    if args.template in ("standard", "mintable", "burnable", "pausable", "blacklist"):
+    if args.template in ("standard", "burnable", "pausable", "blacklist"):
         ctor_args = f'"{args.name}" "{args.symbol}" {decimals} {supply_wei}'
+    elif args.template == "mintable":
+        # 5th arg: maxSupply cap. Default to 10x initial supply so the deployer
+        # has headroom to mint 9x more.
+        max_supply = int(args.max_supply) if args.max_supply else (supply_wei * 10)
+        ctor_args = f'"{args.name}" "{args.symbol}" {decimals} {supply_wei} {max_supply}'
     elif args.template == "deflationary":
         ctor_args = f'"{args.name}" "{args.symbol}" {decimals} {supply_wei} {fee_bps}'
     else:
@@ -160,17 +169,28 @@ def cmd_render(args: argparse.Namespace) -> int:
     contract_name = name_to_contract.get(args.template, "StandardToken.sol").replace(".sol", "")
     script_path = REPO_ROOT / tpl["script"]
 
+    # The bash-expansion trap: if you use --private-key $PRIVATE_KEY and the shell
+    # expands it, you get --private-key 0xYOURKEY (then forge wants the next arg
+    # which is a positional flag, triggering the famous
+    # `error: a value is required for '--private-key <RAW_PRIVATE_KEY>'`).
+    #
+    # The cleanest path is the keystore form: import once with cast wallet import,
+    # then use --account deployer. The env-var form (FOUNDRY_PRIVATE_KEY=...) is
+    # also safe but puts the key in process env while forge runs.
     cmd = (
+        f"# ONE-TIME SETUP (run once, then never need it again):\n"
+        f"cast wallet import --private-key 0xYOUR_PRIVATE_KEY --keystore ~/.foundry/keystore deployer\n\n"
+        f"# DEPLOY (uses the imported account, no bash trap):\n"
         f"forge create "
         f"--rpc-url {chain['rpc']} "
-        f"--private-key $PRIVATE_KEY "
+        f"--account deployer "
         f"--broadcast "
         f"--chain-id {chain['chain_id']} "
     )
     if args.verify:
         cmd += f"--verify "
     cmd += f"--constructor-args {ctor_args} "
-    cmd += f"src/{tpl['script']}:{tpl['script'].replace('.s.sol', '')}"
+    cmd += f"{tpl['script']}:{Path(tpl['script']).name.replace('.s.sol', '')}"
 
     print("")
     print("=" * 72)
@@ -309,6 +329,7 @@ def main() -> int:
     pr.add_argument("--decimals", default="18")
     pr.add_argument("--supply", required=True, help="human amount, e.g. 1000000")
     pr.add_argument("--fee-bps", default="0", help="deflationary template only (0-1000)")
+    pr.add_argument("--max-supply", default="", help="mintable template only (defaults to 10x supply)")
     pr.add_argument("--verify", action="store_true", help="also verify on PharosScan after deploy")
 
     pv = sub.add_parser("verify", help="Verify a deployed token on PharosScan")
