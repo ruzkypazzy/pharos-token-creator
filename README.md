@@ -66,6 +66,68 @@ chmod +x scripts/*.sh
 ```
 
 That's it. No `pip install`, no `npm install`, no `forge build`, no compile. The skill is one or more bash scripts that use `cast` (from Foundry) for every RPC read. The `assets/networks.json` file already knows the Pharos Pacific Mainnet and Atlantic Testnet endpoints.
+## Quick test (try it in 30 seconds)
+
+After the 3-step install above, run the demo mode (no private key, no RPC, no setup):
+
+```bash
+python3 scripts/deploy.py render --template standard --name "My Token" --symbol MTK --supply 1000000 --chain mainnet
+```
+
+You should see a printed report. The demo uses synthetic data, so it works offline.
+
+To run a real check on a Pharos transaction, wallet, or token, replace the placeholder:
+
+```bash
+FOUNDRY_PRIVATE_KEY=0xyourkey forge create --rpc-url https://atlantic.dplabs-internal.com --chain-id 688689 --broadcast src/DeployStandardToken.s.sol:DeployStandardToken --constructor-args "My Token" MTK 18 1000000000000000000000000
+```
+
+## Use in an AI agent (Claude Code / Codex / OpenClaw / Pharos Agent Center)
+
+The skill ships with a `SKILL.md` that AI agents auto-load. Once installed in your agent, just ask in natural language — the agent will read `SKILL.md` and run the bash script for you.
+
+```text
+"Deploy an ERC-20 token named Test Token with symbol TST and 1M supply on Pharos testnet."
+```
+
+The agent will run `python3 scripts/deploy.py render --template standard --name "My Token" --symbol MTK --supply 1000000 --chain mainnet` (or the live command with the address you gave) and read the result back to you.
+
+### Install in your agent
+
+**Option A — Pharos Agent Center** (one-line install):
+
+```bash
+# from inside any agent that has the Pharos Agent Center CLI
+pharos-skill install https://github.com/ruzkypazzy/pharos-token-creator
+```
+
+**Option B — OpenClaw / Claude Code / Codex** (one-line via npm):
+
+```bash
+npx skills add https://github.com/ruzkypazzy/pharos-token-creator
+```
+
+**Option C — Manual install** (drop into your agent's skills directory):
+
+```bash
+# Clone the skill
+git clone https://github.com/ruzkypazzy/pharos-token-creator
+cd pharos-token-creator
+
+# Claude Code: copy to ~/.claude/skills/
+mkdir -p ~/.claude/skills/pharos-token-creator
+cp -r . ~/.claude/skills/pharos-token-creator/
+
+# Codex: copy to ~/.codex/skills/
+mkdir -p ~/.codex/skills/pharos-token-creator
+cp -r . ~/.codex/skills/pharos-token-creator/
+
+# OpenClaw: copy to ~/.openclaw/skills/
+mkdir -p ~/.openclaw/skills/pharos-token-creator
+cp -r . ~/.openclaw/skills/pharos-token-creator/
+
+# Then restart the agent — the skill will be auto-loaded.
+```
 ## Usage Examples
 
 ### Create a Standard Token
