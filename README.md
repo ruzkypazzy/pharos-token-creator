@@ -128,20 +128,6 @@ chmod +x scripts/*.sh
 ```
 
 That's it. No `pip install`, no `npm install`, no `forge build`, no compile. The skill is one or more bash scripts that use `cast` (from Foundry) for every RPC read. The `assets/networks.json` file already knows the Pharos Pacific Mainnet and Atlantic Testnet endpoints.
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/ruzkypazzy/pharos-token-creator
-cd pharos-token-creator
-
-# Install OpenZeppelin contracts
-forge install OpenZeppelin/openzeppelin-contracts@v5.0.0
-
-# Create environment file
-cp .env.example .env
-```
-
 ### Configuration
 
 Edit `.env` file:
